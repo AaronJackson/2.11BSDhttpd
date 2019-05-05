@@ -1,0 +1,39 @@
+* 2.11BSD httpd
+
+A small, and fairly bad, web server which runs under 2.11BSD.
+
+- Only supports GET.
+- Will send images, add your own MIME types if you like.
+- Assumes web root is ~/var/www~
+- Probably insecure.
+- Contributions very welcome.
+
+If my PDP-11 is running, you can see the page it hosts at
+http://catbert.rhwyd.co.uk
+
+** Setup Instructions
+
+Copy httpd.c to your PDP-11, compile it and move the binary to the
+proper place:
+
+#+BEGIN_SRC
+cc httpd.c -o httpd
+mv httpd /usr/libexec/httpd
+#+END_SRC
+
+Append the following line to ~/etc/inetd.conf~
+
+#+BEGIN_SRC
+http    stream  tcp     nowait  nobody  /usr/libexec/tcpd       httpd
+#+END_SRC
+
+Find the process ID of inetd and send it a HUP:
+
+#+BEGIN_SRC
+ps aux | grep inetd
+kill -HUP <PID>
+#+END_SRC
+
+
+
+

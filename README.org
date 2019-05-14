@@ -27,6 +27,16 @@ Append the following line to ~/etc/inetd.conf~
 #+BEGIN_SRC
 http    stream  tcp     nowait  nobody  /usr/libexec/tcpd       httpd
 #+END_SRC
+or
+#+BEGIN_SRC
+http    stream  tcp     nowait  nobody  /usr/libexec/httpd      httpd
+#+END_SRC
+
+using ~tcpd~ instead of directly calling ~httpd~ (you can if you
+like), will allow you to user your ~hosts.allow~ file to limit
+access. If ~inetd~ was compiled with ~-DPARANOID~ (it probably was),
+it will also block hosts which have wrong reverse DNS records, which
+may not be desirable.
 
 Append the following line to ~/etc/services~
 

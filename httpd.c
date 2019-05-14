@@ -59,6 +59,7 @@ char *argv[];
 
      /* Extract file type and output content-type header */
      ext = rindex(path, '.');
+     if (!ext) ext = rindex(path, NULL);
      if (!strcmp(ext, ".html"))
 	  printf("Content-Type: text/html\r\n");
      else if (!strcmp(ext, ".jpg"))

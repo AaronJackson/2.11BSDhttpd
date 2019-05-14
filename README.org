@@ -9,7 +9,8 @@ A small, and fairly bad, web server which runs under 2.11BSD.
 - Contributions very welcome.
 
 If my PDP-11 is running, you can see the page it hosts at
-http://catbert.rhwyd.co.uk
+http://catbert.rhwyd.co.uk or alternative
+http://krieger.rhwyd.co.uk:8080
 
 ** Setup Instructions
 
@@ -27,6 +28,12 @@ Append the following line to ~/etc/inetd.conf~
 http    stream  tcp     nowait  nobody  /usr/libexec/tcpd       httpd
 #+END_SRC
 
+Append the following line to ~/etc/services~
+
+#+BEGIN_SRC
+http            80/tcp
+#+END_SRC
+
 Find the process ID of inetd and send it a HUP:
 
 #+BEGIN_SRC
@@ -34,6 +41,7 @@ ps aux | grep inetd
 kill -HUP <PID>
 #+END_SRC
 
-
+Finally, create ~/var/www/index.html~, along with your other files,
+and ensure they are readable by nobody, or world readable.
 
 

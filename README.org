@@ -10,7 +10,7 @@ A small, and fairly bad, web server which runs under 2.11BSD.
 
 If my PDP-11 is running, you can see the page it hosts at
 http://catbert.rhwyd.co.uk or alternative
-http://krieger.rhwyd.co.uk:8080
+http://emubert.rhwyd.co.uk
 
 ** Setup Instructions
 

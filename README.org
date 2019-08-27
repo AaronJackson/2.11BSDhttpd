@@ -1,5 +1,8 @@
 * 2.11BSD httpd
 
+This web server rapidly grew into something very different and reasonably powerful. Strongly recommended that you use the later versions, which can be found on the PiDP-11 google groups. At the time of writing, the latest version is https://groups.google.com/forum/#!msg/pidp-11/nE5W6wAEIxA/7mGpfjAYAwAJ
+
+
 A small, and fairly bad, web server which runs under 2.11BSD.
 
 - Only supports GET.

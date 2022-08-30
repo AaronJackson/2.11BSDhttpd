@@ -1,0 +1,21 @@
+on: [push, pull_request]
+
+jobs:
+  httpd:
+    runs-on: ubuntu-latest
+    name: build httpd
+    steps:
+      - uses: AaronJackson/2.11BSD-Action@v2.0
+        with:
+          run: |
+            cd /github
+            ls
+            make
+            mkdir /var/www
+            echo message > /var/www/index.html
+            echo GET / HTTP/1.1 > test.req
+            echo >> test.req
+            cat test.req | ./httpd > test.resp
+            grep 200 test.resp
+            grep message test.resp
+

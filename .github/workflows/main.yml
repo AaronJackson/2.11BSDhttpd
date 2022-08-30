@@ -3,7 +3,7 @@ on: [push]
 jobs:
   httpd:
     runs-on: ubuntu-latest
-    name: build /bin
+    name: build httpd
     steps:
       - uses: AaronJackson/2.11BSD-Action@v1.0
         with:

@@ -1,7 +1,43 @@
 * 2.11BSD httpd
 
-This web server rapidly grew into something very different and reasonably powerful. Strongly recommended that you use the later versions, which can be found on the PiDP-11 google groups. At the time of writing, the latest version is https://groups.google.com/forum/#!msg/pidp-11/nE5W6wAEIxA/7mGpfjAYAwAJ
+A web server for 2.11 BSD running on the PiDP-11/70
 
+The original thread discussing the server can be found at https://groups.google.com/g/pidp-11/c/nE5W6wAEIxA/m/7mGpfjAYAwAJ
+
+=== Key Update Notes from Chase Covello (Aug, 2019)
+
+I've recently made these changes to httpd.c, which I'm running on my PiDP-11 at http://chasecovello.ddns.net/:
+
+1) Logging with source IP, date, HTTP request, response code, and file size or error message. Make sure /usr/adm/httpd.log exists and has correct permissions or all requests will return an HTTP 500.
+
+2) Rudimentary CGI support. It will execute non-setuid/setuid binaries only if they are in a path that includes /cgi-bin/ somewhere. It doesn't pass an environment because I didn't need it.
+
+3) More robust error checking and some buffer overrun fixes.
+
+4) Use of a buffer and fread/fwrite to serve the file instead of fgetc/fputc. It's noticeably faster now.
+
+I've made a few more changes since the last version; I will be including this one in the new 2.11BSD disk image for testing. I think it's time I set up a github repo, but for now the new httpd.c is attached, along with a Makefile to make rebuilding and installing easier.
+
+The big changes are:
+
+    Added a 60 second timeout to kill the httpd process if the client fails to complete the HTTP request. I noticed after a few days I have several httpd processes sitting there and I got tired of manually killing them.
+    Changed document dir to /home/www because /home has much more free space than / on the PiDP-11 2.11BSD disk image.
+    Tuned the buffer size to save memory; testing shows little to no performance improvement beyond 64 bytes when serving big files. I went with 256 for no real reason other than it's not too big and not too small. Below are the test results for a 30MB file from my system:
+
+BUF_SIZE    SPEED (kB/s)
+    1            20
+    2            36
+    4            44
+    8            90
+   16           120
+   32           120
+   64           125
+  128           125
+  256           125
+
+=== Original Release Notes from Aaron Jackson (Aug, 2019)
+
+This web server rapidly grew into something very different and reasonably powerful. Strongly recommended that you use the later versions, which can be found on the PiDP-11 google groups. At the time of writing, the latest version is https://groups.google.com/forum/#!msg/pidp-11/nE5W6wAEIxA/7mGpfjAYAwAJ
 
 A small, and fairly bad, web server which runs under 2.11BSD.
 

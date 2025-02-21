@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <sys/errno.h>
 #include <sys/time.h>
+#include <sys/types.h>
 
 #include <netdb.h>
 #include <signal.h>
@@ -37,7 +38,9 @@ FILE *htlog;
 #define MAX_HEADER_BYTES_TO_FORWARD 5000
 #define MAX_HEADER_ITEM_BYTES 500
 #define MAX_HEADER_ITEM_COUNT 30
-#define MAX_CONTENT_LENGTH_TO_FORWARD 10000
+
+#define QUERY_STRING_ENV "QUERY_STRING"
+#define CONTENT_LENGTH_ENV "CONTENT_LENGTH"
 
 /* Linked list structure used to pass 
     request data to the CGI program */
@@ -146,11 +149,14 @@ char *argv[];
     setitimer(ITIMER_REAL, &timeout, 0);
 
     /* Fill in path with GET/POST request
-
        Optionally, pass parameters as arguments to CGI program. */
     {
         char line[PATH_LEN];
         char *lineptr;
+
+        /* Disable buffering for stdin so that request content
+            is available for CGI programs */
+        setvbuf(stdin, NULL, _IONBF, 0);
                 
         while (fgets(line, sizeof(line), stdin)) {
 
@@ -158,37 +164,43 @@ char *argv[];
             line[strcspn(line, "\r\n")] = '\0';
 
 #ifdef CGI_FORWARD_REQUEST_PAYLOAD
+            /* Copy the Content-Length into an environment variable named CONTENT_LENGTH
+                for compatability with Apache HTTPD CGI handling */
+            if (strstr(line, "Content-Length: ") == line) {
+                char *content_length_value = NULL;
+                strtok(line, " ");
+                content_length_value = strtok(NULL, " ");
+                if (content_length_value) {
+                    int chars_needed = strlen(CONTENT_LENGTH_ENV) + strlen(content_length_value) + 2;
+                    char *temp_content_len = (char *) malloc(sizeof(char) * chars_needed);
+                    if (temp_content_len) {
+                        sprintf(temp_content_len, "%s=%s", CONTENT_LENGTH_ENV, content_length_value);
+                        add_node(temp_content_len, 0, 0);
+                        free(temp_content_len);
+                    }
+                } 
+            }
+
             if (request_header_item_count < MAX_HEADER_ITEM_COUNT && 
                     request_header_bytes_used < MAX_HEADER_BYTES_TO_FORWARD) {
-                int node_bytes = add_node(line, 0, 0);
+                int node_bytes = add_node(line, 0, 1);
                 if (node_bytes > 0) {
                    request_header_bytes_used += node_bytes;
                    ++request_header_item_count;
                 }
 #ifdef DETAILED_LOGGING
             } else if (request_header_item_count >= MAX_HEADER_ITEM_COUNT) {
-                fprintf(htlog, "Reached limit for number of payload items to forward\n");
+                fprintf(htlog, "Reached limit for number of parameters to forward\n");
             } else {
-                fprintf(htlog, "Reached limit for number of bytes of payload to forward\n");
+                fprintf(htlog, "Reached limit for number of bytes of parameter values to forward\n");
 #endif
             }
+#endif
 
-            /* Detect the double line break to end req header and start content */
-            if (strlen(line) == 0) {
-#ifdef DETAILED_LOGGING
-                fprintf(htlog, "Reached content, length %d\n", content_length);
-#endif
-                /* If Content-Length found, signal loading of content */
-                if (content_length > 0) {
-                    is_content = 1;
-                }
-                break;
-            }
-#else
            /* Detect the double line break to end req header */
             if (strlen(line) == 0)
                 break;
-#endif
+
             /* Get the path from the GET or POST request */
             if (strstr(line, "GET ") == line ||
                 strstr(line, "POST ") == line) {
@@ -203,36 +215,35 @@ char *argv[];
                 if (lineptr) {
                     if (*lineptr == '/') {
                         ++lineptr;
-                    }    
+                    }
+#ifdef CGI_FORWARD_REQUEST_PAYLOAD
+                    /* If there is a request string, place it in an 
+                        environment variable named QUERY_STRING, which
+                        if compatable with Apache HTTPD CGI handling */
+                    {
+                        char *query_start = strchr(lineptr, '?');
+                        if (query_start) {
+                            int chars_needed;
+                            char *temp_env_param;
+                            chars_needed = strlen(QUERY_STRING_ENV) + strlen(query_start + 1) + 2;
+                            temp_env_param = (char *) malloc(sizeof(char) * chars_needed);
+                            if (temp_env_param) {
+                                sprintf(temp_env_param, "%s=%s", QUERY_STRING_ENV, query_start + 1);
+                            }
+                            add_node(temp_env_param, 0, 0);
+                            free(temp_env_param);
+
+                            /* Remove the query from the path */
+                            *query_start = '\0';
+                        }
+                    }
+#endif    
                     strncat(path, lineptr, sizeof(path)-strlen(path)-1);
                 }
             }
 
-#ifdef CGI_FORWARD_REQUEST_PAYLOAD
-            /* Found the Content-Length. If within allowed range, store it */
-            if (strstr(line, "Content-Length: ") == line) {
-                int temp_length = atoi(line + strlen("Content-Length: "));
-                if (temp_length > 0 || temp_length <= MAX_CONTENT_LENGTH_TO_FORWARD) {
-                    content_length = temp_length;
-#ifdef DETAILED_LOGGING
-                    fprintf(htlog, "Content-Length: %d\n", content_length);
-#endif
-                }
-            }
-#endif
         }
     }
-
-#ifdef CGI_FORWARD_REQUEST_PAYLOAD
-    /* Get the content and place it in the request content linked list */
-    if (is_content) {
-        add_request_content_to_payload(content_length);
-#ifdef DETAILED_LOGGING
-    } else {
-        fprintf(htlog, "No Content-Length in header, skip loading content\n");
-#endif
-    }
-#endif 
 
     /* Cancel the timeout now that we have the http request */
     timerclear(&timeout.it_interval);
@@ -286,9 +297,13 @@ char *argv[];
         if (!(pid = vfork())) {
             /* Child process */
 #ifdef CGI_FORWARD_REQUEST_PAYLOAD
+            char **argv = (char **) malloc(sizeof (char *) * 2);
+
             /* Place program name in first argument */
-            add_node(path, 1, 0);
-            execve(path, get_parameters(), NULL);
+            *argv = strdup(path);
+            *(argv + 1) = NULL;
+            
+            execve(path, argv, get_parameters());
 #else
             execve(path, NULL, NULL);
 #endif
@@ -301,14 +316,10 @@ char *argv[];
             wait(&status);
 
             if (WIFEXITED(status))
-                fprintf(htlog, "Exited with status %d\n",
-                    status.w_retcode);
-/*                    (int)(WEXITSTATUS(status))); */
-                    else if (WIFSIGNALED(status))
-                fprintf(htlog, "Terminated with signal %d\n",
-                    status.w_termsig);
-/*                    (int)(WTERMSIG(status))); */
-                }
+                fprintf(htlog, "Exited with status %d\n", status.w_retcode);
+            else if (WIFSIGNALED(status))
+                fprintf(htlog, "Terminated with signal %d\n", status.w_termsig);
+        }
 
     } else
 #endif /* CGI_BIN */
@@ -369,10 +380,10 @@ char *argv[];
 /* Add a node containing the param value to the linked list. 
     The value is copied into allocated memory before being added. 
     If at_front is non-zero (true), value inserted at front of the list. */
-int add_node(param, at_front, ignore_size_limit)
+int add_node(param, at_front, replace_colon)
 char *param; 
 int at_front;
-int ignore_size_limit;
+int replace_colon;
 {
     char *param_storage = NULL;
     struct linked_list *node = NULL;
@@ -386,11 +397,18 @@ int ignore_size_limit;
         return;
     }
 
-    if (!ignore_size_limit && strlen(param) > MAX_HEADER_ITEM_BYTES) { 
+    if (strlen(param) > MAX_HEADER_ITEM_BYTES) { 
 #ifdef DETAILED_LOGGING
         fprintf(htlog, "Request parameter being ignored, too long (%d bytes): %s\n", strlen(param), param);
 #endif
         return 0;
+    }
+
+    if (replace_colon) {
+        char *colon_position = strchr(param, ':');
+        if (colon_position) {
+            *colon_position = '=';
+        }
     }
 
     /* Allocate memory for parameter value */
@@ -459,39 +477,6 @@ int ignore_size_limit;
     return bytes_allocated;
 }
 
-void add_request_content_to_payload(content_length) 
-int content_length;
-{
-    char *content;
-    int bytes_read;
-
-    errno = 0;
-    content = (char *) malloc((content_length + 1) * sizeof(char));
-    if (errno) {
-#ifdef DETAILED_LOGGING
-        fprintf(htlog, "Allocation error trying to store request content: length=%d\n", content_length);
-#endif
-        return;
-    } else if (content == NULL) {
-#ifdef DETAILED_LOGGING
-        fprintf(htlog, "Unable to store request content (no memory allocated): length=%d\n", content_length);
-#endif
-        return;
-    }
-#ifdef DETAILED_LOGGING
-    fprintf(htlog, "Reading content, up to %d bytes\n", content_length);
-#endif
-
-    bytes_read = fread(content, sizeof(char), content_length, stdin);
-    *(content + bytes_read) = '\0';
-
-#ifdef DETAILED_LOGGING
-    fprintf(htlog, "Read %d bytes of content\n", bytes_read);
-#endif
-
-    add_node(content, 0, 1);
-}
-
 /* Get a vector of the parameter values to pass to the CGI program via execve(). */
 char **get_parameters() {
     int num_parameters = 0;
@@ -534,5 +519,4 @@ char **get_parameters() {
 
     return parameters;
 }
-
 #endif /* CGI_FORWARD_REQUEST_PAYLOAD */

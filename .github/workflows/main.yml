@@ -20,5 +20,5 @@ jobs:
             grep message test.resp
             echo GET /fail HTTP/1.1 > test.req
             echo >> test.req
-            cat test.req | ./httpd > test.resp
+            cat test.req | ./httpd > test.resp || true
             grep 404 test.resp

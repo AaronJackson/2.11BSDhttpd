@@ -18,4 +18,7 @@ jobs:
             cat test.req | ./httpd > test.resp
             grep 200 test.resp
             grep message test.resp
-
+            echo GET /fail HTTP/1.1 > test.req
+            echo >> test.req
+            cat test.req | ./httpd > test.resp
+            grep 404 test.resp

@@ -14,7 +14,7 @@ The current version:
  - Only supports HTTP (insecure)
  - Welcomes further contributions
 
-# Latest Update Notes from Dave Read (Feb, 2025)
+** Latest Update Notes from Dave Read (Feb, 2025)
 
 I've added passing of request header data to the CGI program's environment. 
 Constraints on the amount of data that will be passed are set conservatively. The
@@ -25,16 +25,13 @@ Also, I've created a version of Dr. Nim (ESR 1960's mechanical computer game) as
 proof-of-concept for accessing the request parameters and content. That code is 
 available in my 2.11BSD-Dr.Nim repository.
 
-# Key Update Notes from Chase Covello (Aug, 2019)
+** Key Update Notes from Chase Covello (Aug, 2019)
 
 I've recently made these changes to httpd.c, which I'm running on my PiDP-11 at http://chasecovello.ddns.net/:
 
 1) Logging with source IP, date, HTTP request, response code, and file size or error message. Make sure /usr/adm/httpd.log exists and has correct permissions or all requests will return an HTTP 500.
-
 2) Rudimentary CGI support. It will execute non-setuid/setuid binaries only if they are in a path that includes /cgi-bin/ somewhere. It doesn't pass an environment because I didn't need it.
-
 3) More robust error checking and some buffer overrun fixes.
-
 4) Use of a buffer and fread/fwrite to serve the file instead of fgetc/fputc. It's noticeably faster now.
 
 I've made a few more changes since the last version; I will be including this one in the new 2.11BSD disk image for testing. I think it's time I set up a github repo, but for now the new httpd.c is attached, along with a Makefile to make rebuilding and installing easier.
@@ -56,7 +53,7 @@ BUF_SIZE    SPEED (kB/s)
   128           125
   256           125
 
-# Original Release Notes from Aaron Jackson (Aug, 2019)
+** Original Release Notes from Aaron Jackson (Aug, 2019)
 
 This web server rapidly grew into something very different and reasonably powerful. Strongly recommended that you use the later versions, which can be found on the PiDP-11 google groups. At the time of writing, the latest version is https://groups.google.com/forum/#!msg/pidp-11/nE5W6wAEIxA/7mGpfjAYAwAJ
 

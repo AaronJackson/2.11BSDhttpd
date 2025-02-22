@@ -5,18 +5,25 @@ A web server for 2.11 BSD running on the PiDP-11/70
 The original thread discussing the server can be found at https://groups.google.com/g/pidp-11/c/nE5W6wAEIxA/m/7mGpfjAYAwAJ
 
 The current version:
- - Supports GET and POST requests
- - Assumes web root is /home/www 
- - Provides support for cgi-bin
- - Forwards HTTP headers and content to CGI program's command line
+ - Supports static file retrieval (HTML and images)
+ - Supports CGI GET and POST requests
+ - Assumes web root is /home/www
+ - Assumes CGI root is /home/www/cgi-bin
+ - Places HTTP headers in the environment for CGI programs
+ - Passes QUERY_STRING and CONTENT_LENGTH enviroment variables, aligning with Apache HTTPD CGI
  - Only supports HTTP (insecure)
  - Welcomes further contributions
 
 === Latest Update Notes from Dave Read (Feb, 2025)
 
-I've added support for forwarding request data (header and content) to the CGI program's command line. Constraints on the amount of data that will be forwarded is 
+I've added passing of request header data to the CGI program's environment. 
+Constraints on the amount of data that will be passed are set conservatively. The
+stdin channel has been set to unbuffered so that CGI applications called with POST
+will be able to read the content.
 
-Also, I've created a version of Dr. Nim (ESR 1960's mechanical computer game) as a proof-of-concept for accessing the request parameters and content. That code is available in my 2.11BSD-Dr.Nim repository.
+Also, I've created a version of Dr. Nim (ESR 1960's mechanical computer game) as a 
+proof-of-concept for accessing the request parameters and content. That code is 
+available in my 2.11BSD-Dr.Nim repository.
 
 === Key Update Notes from Chase Covello (Aug, 2019)
 
